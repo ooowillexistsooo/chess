@@ -1,20 +1,18 @@
+import {Chess} from "https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm";
+
+const game = new Chess()
+
+const pieceSymbols = {
+    w: {p: '♙', r: '♖', n: '♘', b: '♗', q: '♕', k: '♔'},
+    b: {p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚'}
+}
+
 const boardElement = document.getElementById("chessboard");
 const turnIndicatior = document.getElementById("turn-indicator");
 
 let currentTurn = 'white';
 let draggedPiece = null;
 let sourceSquare = null;
-
-const initialBoard = [
-    ['♜','♞','♝','♛','♚','♝','♞','♜'],
-    ['♟','♟','♟','♟','♟','♟','♟','♟'],
-    ['','','','','','','',''],
-    ['','','','','','','',''],
-    ['','','','','','','',''],
-    ['','','','','','','',''],
-    ['♙','♙','♙','♙','♙','♙','♙','♙'],
-    ['♖','♘','♗','♕','♔','♗','♘','♖']
-];
 
 function getPieceColor(piece) {
     if (!piece) return null;
@@ -23,6 +21,7 @@ function getPieceColor(piece) {
 }
 
 function createBoard() {
+    const position = game.board();
     boardElement.innerHTML = '';
 
     for (let r = 0; r < 8; r++) {
@@ -39,10 +38,12 @@ function createBoard() {
             square.dataset.row = r;
             square.dataset.col = c;
 
-            const piece = initialBoard[r][c];
-            if (!piece !== '') {
-                square.innerText = piece;
-                square.setAttribute('draggable', 'true');
+            const piece = position[r][c];
+            square.dataset.square = `${'abcdefgh'[c]}${8-r}`;
+
+            if (piece) {
+                square.textContent = pieceSymbols[piece.color][piece.type];
+                square.draggable = piece.color === game.turn();
             }
 
             square.addEventListener('dragstart', handleDragStart);
@@ -55,16 +56,8 @@ function createBoard() {
 }
 
 function handleDragStart(e) {
-    const piece = e.target.innerText;
-    const color = getPieceColor(piece);
-
-    if (color === currentTurn) {
-        draggedPiece = piece;
-        sourceSquare = e.target;
-        e.dataTransfer.setData('text/plain', piece);
-    } else {
-        e.preventDefault();
-    }
+    const square = e.currentTarget;
+    e.dataTransfer.setData('text/plain', square.dataset.square);
 }
 
 function handleDragOver(e) {
@@ -72,30 +65,20 @@ function handleDragOver(e) {
 }
 
 function handleDrop(e) {
-    e.preventDefault();
-    let targetSquare = e.target;
+    const targetSquare = e.target.closest('.square');
+    if (!targetSquare) return;
 
-    if (!targetSquare.classList.contains('square')) {
-        targetSquare = targetSquare.parentElement;
-    } 
+    const from = e.dataTransfer.getData('text/plain');
+    const to = targetSquare.dataset.square;
 
-    const targetPiece = targetSquare.innerText;
-    const targetColor = getPieceColor(targetPiece);
+    const isLegal = game.moves({square: from, verbose: true})
+        .some(move => move.to === to);
 
-    if (targetColor === currentTurn) return;
+    if (!isLegal) return;
 
-    const startRow = parseInt(sourceSquare.dataset.row);
-    const startCol = parseInt(sourceSquare.dataset.col);
-    const targetRow = parseInt(targetSquare.dataset.row);
-    const targetCol = parseInt(targetSquare.dataset.col);
-
-    initialBoard[targetRow][targetCol] = draggedPiece;
-    initialBoard[startRow][startCol] = '';
-
+    game.move({from, to, promotion: 'q'});
     createBoard();
-
-    currentTurn = currentTurn === 'white' ? 'black' : 'white';
-    turnIndicatior.innerText = currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1);
+    turnIndicatior.textContent = game.turn() === 'w' ? 'white' : 'black';
 }
 
 createBoard()
