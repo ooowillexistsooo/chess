@@ -30,6 +30,14 @@ body {
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
 
+#analysis-output {
+    max-width: 90vw;
+    margin: 0 auto;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    text-align: left;
+}
+
 .square {
     width: 80px;
     height: 80px;
