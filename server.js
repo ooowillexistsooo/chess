@@ -301,7 +301,12 @@ io.on("connection", (socket) => {
                 transaction.create(usernameRef, {uid: socket.data.uid});
                 transaction.create(userRef, {
                     username,
-                    createdAt: FieldValue.serverTimestamp()
+                    rating: 1200,
+                    createdAt: FieldValue.serverTimestamp(),
+                    gamesPlayed: 0,
+                    wins: 0,
+                    losses: 0,
+                    draws: 0
                 });
             });
 

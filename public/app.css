@@ -3,31 +3,117 @@
 body {
     background-color: #222;
     color: #fff;
-    font-family: sans-serif;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    height: 100vh;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    min-height: 100vh;
     margin: 0;
+}
+
+.page-header {
+    padding: 8px 24px 0;
+    text-align: center;
 }
 
 .title {
     font-family: "Monsieur La Doulaise", cursive;
-    font-size: 100px;
+    font-size: clamp(56px, 9vw, 100px);
     margin: 1px;
 }
 
+.app-layout {
+    display: grid;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    gap: 24px;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+    align-items: start;
+}
+
+.sidebar {
+    display: grid;
+    gap: 18px;
+    position: sticky;
+    top: 16px;
+}
+
+.sidebar section {
+    padding: 18px;
+    background: #303030;
+    border: 1px solid #444;
+    border-radius: 10px;
+    text-align: left;
+}
+
+.sidebar h2 {
+    margin: 0 0 12px;
+    font-size: 20px;
+}
+
+.account-controls input,
+.profile-controls input {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 10px;
+}
+
+.account-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.sidebar button,
+.main-content button {
+    padding: 9px 12px;
+    cursor: pointer;
+}
+
+.sidebar button:disabled,
+.main-content button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+#account-status,
+#my-profile,
+#profile-result {
+    overflow-wrap: anywhere;
+}
+
+#profile-result {
+    margin-top: 12px;
+}
+
 .game-container {
-    text-align: center;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.game-container h2 {
+    margin: 0 0 12px;
+}
+
+.main-content {
+    min-width: 0;
+    text-align: center;
+}
+
+.challenge-controls {
+    margin-bottom: 20px;
 }
 
 #chessboard {
     display: grid;
-    grid-template-columns: repeat(8, 80px);
-    grid-template-rows: repeat(8, 80px);
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-rows: repeat(8, minmax(0, 1fr));
+    width: min(100%, 672px);
+    aspect-ratio: 1;
     border: 4px solid #333;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    box-sizing: border-box;
 }
 
 #analysis-output {
@@ -39,12 +125,12 @@ body {
 }
 
 .square {
-    width: 80px;
-    height: 80px;
+    min-width: 0;
+    min-height: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 50px;
+    font-size: clamp(24px, 6vw, 50px);
     cursor: grab;
     user-select: none;
 }
@@ -63,4 +149,30 @@ body {
 
 .piece:active {
     cursor: grabbing;
+}
+
+@media (max-width: 760px) {
+    .app-layout {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 12px;
+    }
+
+    .sidebar {
+        position: static;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .sidebar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .page-header {
+        padding-inline: 12px;
+    }
+
+    .challenge-controls input {
+        max-width: 100%;
+    }
 }

@@ -7,36 +7,53 @@
     <link rel="stylesheet" href="app.css">
 </head>
 <body>
-    <p class="title">Intermezzo</p>
-    <p>this is like a really cool chess app yk</p>
-    <p>chess.com is really laggy so this exists now</p>
-    <section class="account-controls">
-        <input autocomplete="username" placeholder="username (3-20 letters, numbers, underscores)" id="username">
-        <input type="email" placeholder="email" autocomplete="email" id="email">
-        <input type="password" autocomplete="current-password" placeholder="password" id="password">
-        <div>
-            <button id="sign-up">sign up</button>
-            <button id="sign-in">sign in</button>
-            <button id="save-username">save username</button>
-            <button id="sign-out">sign out</button>
-        </div>
-        <p id="account-status">Sign in or create an account to play.</p>
-    </section>
-    <section class="challenge-controls">
-        <input type="text" placeholder="opponent username" id="challenge-username" autocomplete="off">
-        <button id="send-challenge">send challenge</button>
-        <p id="challenge-status"></p>
-        <div id="incoming-challenges"></div>
-    </section>
-    <div class="game-container">
-        <h2>current turn: <span id="turn-indicator">White</span></h2>
-        <div id="chessboard"></div>
+    <header class="page-header">
+        <p class="title">Intermezzo</p>
+        <p>a really cool chess app</p>
+    </header>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <section class="account-controls">
+                <h2>Account</h2>
+                <input autocomplete="username" placeholder="username (3-20 letters, numbers, underscores)" id="username">
+                <input type="email" placeholder="email" autocomplete="email" id="email">
+                <input type="password" autocomplete="current-password" id="password" placeholder="password">
+                <div class="account-actions">
+                    <button id="sign-up">sign up</button>
+                    <button id="sign-in">sign in</button>
+                    <button id="save-username">save username</button>
+                    <button id="sign-out">sign out</button>
+                </div>
+                <p id="account-status">Sign in or create an account to play.</p>
+            </section>
+            <section class="profile-controls">
+                <h2>My profile</h2>
+                <div id="my-profile">Sign in to see your profile.</div>
+
+                <h2>Find a player</h2>
+                <input id="profile-username" placeholder="username" autocomplete="off">
+                <button id="view-profile">view profile</button>
+                <div id="profile-result"></div>
+            </section>
+        </aside>
+        <main class="main-content">
+            <section class="challenge-controls">
+                <input type="text" placeholder="opponent username" id="challenge-username" autocomplete="off">
+                <button id="send-challenge">send challenge</button>
+                <p id="challenge-status"></p>
+                <div id="incoming-challenges"></div>
+            </section>
+            <div class="game-container">
+                <h2>current turn: <span id="turn-indicator">White</span></h2>
+                <div id="chessboard"></div>
+            </div>
+            <button id="find-match" disabled>find match</button>
+            <p id="match-status"></p>
+            <h2>Game analysis</h2>
+            <pre id="analysis-output"></pre>
+            <p>made with love by will</p>
+        </main>
     </div>
-    <button id="find-match" disabled>find match</button>
-    <p id="match-status"></p>
-    <h2>Game analysis</h2>
-    <pre id="analysis-output"></pre>
-    <p>made with love by will</p>
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="basic-board.js"></script>
 </body>
