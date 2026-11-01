@@ -10,11 +10,29 @@
     <p class="title">Intermezzo</p>
     <p>this is like a really cool chess app yk</p>
     <p>chess.com is really laggy so this exists now</p>
+    <section class="account-controls">
+        <input autocomplete="username" placeholder="username (3-20 letters, numbers, underscores)" id="username">
+        <input type="email" placeholder="email" autocomplete="email" id="email">
+        <input type="password" autocomplete="current-password" placeholder="password" id="password">
+        <div>
+            <button id="sign-up">sign up</button>
+            <button id="sign-in">sign in</button>
+            <button id="save-username">save username</button>
+            <button id="sign-out">sign out</button>
+        </div>
+        <p id="account-status">Sign in or create an account to play.</p>
+    </section>
+    <section class="challenge-controls">
+        <input type="text" placeholder="opponent username" id="challenge-username" autocomplete="off">
+        <button id="send-challenge">send challenge</button>
+        <p id="challenge-status"></p>
+        <div id="incoming-challenges"></div>
+    </section>
     <div class="game-container">
         <h2>current turn: <span id="turn-indicator">White</span></h2>
         <div id="chessboard"></div>
     </div>
-    <button id="find-match">find match</button>
+    <button id="find-match" disabled>find match</button>
     <p id="match-status"></p>
     <h2>Game analysis</h2>
     <pre id="analysis-output"></pre>
