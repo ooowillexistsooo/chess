@@ -1,6 +1,8 @@
 # Intermezzo
 a fun chess app
 
+![picture of the thing](image.png)
+
 ## how it was made
 - html
 - node.js
