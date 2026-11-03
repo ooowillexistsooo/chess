@@ -4,6 +4,7 @@ import {randomUUID} from "node:crypto";
 import {Server} from "socket.io";
 import {Chess} from "chess.js";
 import {FieldValue, firebaseAuth, firestore} from "./firebase-admin.js";
+import {calculateEloRatings} from "./elo.js";
 
 const app = express();
 app.use(express.static("public"));
@@ -101,6 +102,88 @@ function finishGame(roomId, room) {
         socketToRoom.delete(playerId);
         io.sockets.sockets.get(playerId)?.leave(roomId);
     }
+}
+
+function getCount(profile, field) {
+    const value = profile[field];
+    return Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+
+async function recordGameResult(roomId, room) {
+    const whiteRef = firestore.collection("users").doc(room.userIds.w);
+    const blackRef = firestore.collection("users").doc(room.userIds.b);
+    const matchRef = firestore.collection("games").doc(roomId);
+    const whiteScore = room.game.isDraw()
+        ? 0.5
+        : room.game.turn() === "b"
+            ? 1
+            : 0;
+
+    return firestore.runTransaction(async (transaction) => {
+        const [matchSnapshot, whiteSnapshot, blackSnapshot] = await Promise.all([
+            transaction.get(matchRef),
+            transaction.get(whiteRef),
+            transaction.get(blackRef)
+        ]);
+
+        if (matchSnapshot.exists) {
+            return {alreadyRecorded: true};
+        }
+        if (!whiteSnapshot.exists || !blackSnapshot.exists) {
+            throw new Error("Cannot record result: a player profile is missing.");
+        }
+
+        const white = whiteSnapshot.data();
+        const black = blackSnapshot.data();
+        const whiteOldRating = Number.isFinite(white.rating) ? white.rating : 1200;
+        const blackOldRating = Number.isFinite(black.rating) ? black.rating : 1200;
+        const ratings = calculateEloRatings(
+            whiteOldRating,
+            blackOldRating,
+            whiteScore
+        );
+        const isDraw = whiteScore === 0.5;
+        const whiteWon = whiteScore === 1;
+        const blackWon = whiteScore === 0;
+
+        transaction.create(matchRef, {
+            whiteId: room.userIds.w,
+            blackId: room.userIds.b,
+            whiteUsername: white.username,
+            blackUsername: black.username,
+            result: isDraw ? "draw" : whiteWon ? "white" : "black",
+            pgn: room.game.pgn(),
+            finishedAt: FieldValue.serverTimestamp()
+        });
+        transaction.set(whiteRef, {
+            rating: ratings.white,
+            gamesPlayed: getCount(white, "gamesPlayed") + 1,
+            wins: getCount(white, "wins") + (whiteWon ? 1 : 0),
+            draws: getCount(white, "draws") + (isDraw ? 1 : 0),
+            losses: getCount(white, "losses") + (blackWon ? 1 : 0)
+        }, {merge: true});
+        transaction.set(blackRef, {
+            rating: ratings.black,
+            gamesPlayed: getCount(black, "gamesPlayed") + 1,
+            wins: getCount(black, "wins") + (blackWon ? 1 : 0),
+            draws: getCount(black, "draws") + (isDraw ? 1 : 0),
+            losses: getCount(black, "losses") + (whiteWon ? 1 : 0)
+        }, {merge: true});
+
+        return {
+            alreadyRecorded: false,
+            white: {
+                username: white.username,
+                oldRating: whiteOldRating,
+                rating: ratings.white
+            },
+            black: {
+                username: black.username,
+                oldRating: blackOldRating,
+                rating: ratings.black
+            }
+        };
+    });
 }
 
 io.on("connection", (socket) => {
@@ -233,7 +316,23 @@ io.on("connection", (socket) => {
             gameOver: game.isGameOver()
         });
 
-        if (game.isGameOver()) {
+        if (game.isGameOver() && !room.ratingsProcessed) {
+            room.ratingsProcessed = true;
+            void recordGameResult(roomId, room)
+                .then((result) => {
+                    if (result.alreadyRecorded) return;
+                    io.to(`user:${room.userIds.w}`).emit("ratings-updated", result);
+                    io.to(`user:${room.userIds.b}`).emit("ratings-updated", result);
+                })
+                .catch((error) => {
+                    console.error("Could not record completed game:", error);
+                    const event = {
+                        message: "The game ended, but its rating could not be updated."
+                    };
+                    io.to(`user:${room.userIds.w}`).emit("ratings-error", event);
+                    io.to(`user:${room.userIds.b}`).emit("ratings-error", event);
+                });
+
             finishGame(roomId, room);
         }
     });
@@ -554,6 +653,54 @@ io.on("connection", (socket) => {
                 console.error("Could not restore challenge state:", recoveryError);
             }
             reply({error: "Could not respond to the challenge."});
+        }
+    });
+
+    socket.on("get-profile", async (payload = {}, callback) => {
+        const reply = typeof callback === "function" ? callback : () => {};
+        const username = String(payload?.username ?? "").trim().toLowerCase();
+
+        if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+            reply({error: "Enter a valid username."});
+            return;
+        }
+
+        try {
+            const usernameDoc = await firestore
+                .collection("usernames")
+                .doc(username)
+                .get();
+
+            if (!usernameDoc.exists) {
+                reply({error: "Player not found."});
+                return;
+            }
+
+            const uid = usernameDoc.data()?.uid;
+            if (typeof uid !== "string") {
+                reply({error: "Player profile not found."});
+                return;
+            }
+            const userDoc = await firestore.collection("users").doc(uid).get();
+
+            if (!userDoc.exists) {
+                reply({error: "Player profile not found."});
+                return;
+            }
+
+            const profile = userDoc.data();
+
+            reply({
+                username: profile.username,
+                rating: Number.isFinite(profile.rating) ? profile.rating : 1200,
+                gamesPlayed: profile.gamesPlayed ?? 0,
+                wins: profile.wins ?? 0,
+                draws: profile.draws ?? 0,
+                losses: profile.losses ?? 0
+            });
+        } catch (error) {
+            console.error("Could not load player profile:", error);
+            reply({error: "Could not load that profile."});
         }
     });
 });

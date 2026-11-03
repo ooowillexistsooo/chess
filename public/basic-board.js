@@ -22,9 +22,12 @@ const analysisOutput = document.getElementById("analysis-output");
 const accountStatus = document.getElementById("account-status");
 const challengeStatus = document.getElementById("challenge-status");
 const incomingChallenges = document.getElementById("incoming-challenges");
+const myProfile = document.getElementById("my-profile");
+const profileResult = document.getElementById("profile-result");
 let myColor = null;
 let currentUser = null;
 let profileReady = false;
+let profileUsername = null;
 
 const boardElement = document.getElementById("chessboard");
 const turnIndicatior = document.getElementById("turn-indicator");
@@ -88,8 +91,11 @@ onAuthStateChanged(auth, (user) => {
     if (!user) {
         socket.disconnect();
         myColor = null;
+        profileUsername = null;
         createBoard();
         incomingChallenges.replaceChildren();
+        myProfile.textContent = "Sign in to see your profile.";
+        profileResult.textContent = "";
         accountStatus.textContent = "Signed out.";
         matchStatus.textContent = "Sign in to play.";
         challengeStatus.textContent = "";
@@ -128,14 +134,76 @@ function initializeSocketProfile() {
             }
 
             profileReady = true;
+            profileUsername = result.username;
             accountStatus.textContent = `Signed in as ${result.username}.`;
             matchButton.disabled = false;
+            loadProfile(result.username, myProfile);
             socket.emit("load-challenges");
         }
     );
 }
 
 socket.on("connect", initializeSocketProfile);
+
+function renderProfile(element, profile) {
+    const heading = document.createElement("strong");
+    heading.textContent = profile.username;
+
+    const rating = document.createElement("p");
+    rating.textContent = `Rating: ${profile.rating} Elo`;
+
+    const games = document.createElement("p");
+    games.textContent =
+        `${profile.gamesPlayed} games · ${profile.wins} wins · ` +
+        `${profile.draws} draws · ${profile.losses} losses`;
+
+    element.replaceChildren(heading, rating, games);
+}
+
+function loadProfile(username, element) {
+    if (!profileReady || !socket.connected) {
+        element.textContent = "Sign in to view profiles.";
+        return;
+    }
+
+    element.textContent = "Loading profile...";
+    socket.emit("get-profile", {username}, (result) => {
+        if (!result || result.error) {
+            element.textContent =
+                result?.error || "Could not load this profile.";
+            return;
+        }
+
+        renderProfile(element, result);
+    });
+}
+
+document.getElementById("view-profile").addEventListener("click", () => {
+    loadProfile(
+        document.getElementById("profile-username").value,
+        profileResult
+    );
+});
+
+socket.on("ratings-updated", (result) => {
+    const updatedPlayer = [result.white, result.black]
+        .find((player) => player.username === profileUsername);
+
+    if (profileUsername) {
+        loadProfile(profileUsername, myProfile);
+    }
+
+    if (updatedPlayer) {
+        const change = updatedPlayer.rating - updatedPlayer.oldRating;
+        const formattedChange = change > 0 ? `+${change}` : String(change);
+        matchStatus.textContent =
+            `Game over. Your rating is ${updatedPlayer.rating} (${formattedChange}).`;
+    }
+});
+
+socket.on("ratings-error", ({message}) => {
+    matchStatus.textContent = message;
+});
 
 matchButton.addEventListener("click", () => {
     if (!profileReady) return;
@@ -327,7 +395,7 @@ socket.on("move-made", async ({fen, pgn, gameOver}) => {
             const message = error instanceof Error ? error.message : String(error);
             analysisOutput.textContent = `Analysis failed: ${message}`;
         } finally {
-            matchButton.disabled = false;
+            matchButton.disabled = !profileReady;
         }
     }
 });

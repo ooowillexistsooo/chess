@@ -81,6 +81,15 @@ body {
     overflow-wrap: anywhere;
 }
 
+#my-profile p,
+#profile-result p {
+    margin: 8px 0 0;
+}
+
+#profile-username {
+    margin-top: 6px;
+}
+
 #profile-result {
     margin-top: 12px;
 }
